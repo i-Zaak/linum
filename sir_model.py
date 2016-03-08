@@ -14,9 +14,10 @@ class State(Enum):
     resistant = 3
 
 class SIR_Agent(Agent):
-    def __init__(self):
+    def __init__(self, unique_id):
         self.state = State.susceptible
         self.next_state = None
+        self.unique_id = unique_id
 
     def step(self, model):
         if self.state == State.susceptible:
@@ -47,7 +48,7 @@ class SIR_Network_Model(Model):
         self.ir_trans = ir_trans
 
         nodes = g.nodes()
-        agent_nodes = list(map(lambda x: SIR_Agent(), nodes))
+        agent_nodes = list(map(lambda x: SIR_Agent(x), nodes))
         n_map = dict(zip(nodes, agent_nodes))
         agent_edges = list(map(lambda e: (n_map[e[0]], n_map[e[1]])  , g.edges()))
 
@@ -60,7 +61,10 @@ class SIR_Network_Model(Model):
         self.network = NetworkSpace(agent_nodes, agent_edges)
         self.dc = DataCollector({"susceptible": lambda m: self.count_state(m, State.susceptible),
                                 "infected": lambda m: self.count_state(m, State.infected),
-                                "resistant": lambda m: self.count_state(m, State.resistant)})
+                                "resistant": lambda m: self.count_state(m, State.resistant)},
+                                {"state": lambda a: a.state.value}
+                                )
+        self.dc.collect(self) #initial state
 
         self.running = True
 
@@ -84,7 +88,8 @@ class SIR_Network_Model(Model):
 if __name__ == "__main__":
     sir_model = SIR_Network_Model()
     sir_model.run_model()
-    results = sir_model.dc.get_model_vars_dataframe()
+    results = sir_model.dc.get_agent_vars_dataframe()
+    print(results)
     results.plot()
 
 
